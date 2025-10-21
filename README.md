@@ -579,7 +579,7 @@ ansible-galaxy collection install community.docker
 [![GitHub Discussions](https://img.shields.io/badge/GitHub-Discussions-181717?style=flat&logo=github)](https://github.com/George-Nyamao/ansible-docker-automation/discussions)
 
 - **Issues**: [GitHub Issues](https://github.com/George-Nyamao/ansible-docker-automation/issues)
-- **Documentation**: See DEPLOYMENT.md for detailed guide
+- **Documentation**: See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed guide
 - **Discussions**: [GitHub Discussions](https://github.com/George-Nyamao/ansible-docker-automation/discussions)
 
 ## Changelog
