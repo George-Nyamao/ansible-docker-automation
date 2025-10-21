@@ -584,7 +584,7 @@ ansible-galaxy collection install community.docker
 
 ## Changelog
 
-### v1.0.0 (2024-10-19)
+### v1.0.0 (2025-10-21)
 - Initial release
 - Docker installation automation
 - Container lifecycle management
