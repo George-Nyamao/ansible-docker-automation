@@ -1,0 +1,42 @@
+---
+- name: Cleanup Docker Resources
+  hosts: docker_hosts
+  become: yes
+  
+  vars_prompt:
+    - name: confirm_cleanup
+      prompt: "Are you sure you want to cleanup? This will remove stopped containers, unused images, and volumes. (yes/no)"
+      private: no
+  
+  tasks:
+    - name: Stop all containers
+      shell: docker stop $(docker ps -aq)
+      when: confirm_cleanup == "yes"
+      ignore_errors: yes
+    
+    - name: Remove stopped containers
+      command: docker container prune -f
+      when: confirm_cleanup == "yes"
+    
+    - name: Remove unused images
+      command: docker image prune -a -f
+      when: confirm_cleanup == "yes"
+    
+    - name: Remove unused volumes
+      command: docker volume prune -f
+      when: confirm_cleanup == "yes"
+    
+    - name: Remove unused networks
+      command: docker network prune -f
+      when: confirm_cleanup == "yes"
+    
+    - name: Display cleanup summary
+      command: docker system df
+      register: cleanup_summary
+      when: confirm_cleanup == "yes"
+      changed_when: false
+    
+    - name: Show cleanup results
+      debug:
+        var: cleanup_summary.stdout_lines
+      when: confirm_cleanup == "yes"

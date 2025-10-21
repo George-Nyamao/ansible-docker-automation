@@ -1,0 +1,34 @@
+---
+- name: Create application directory
+  file:
+    path: "{{ app_compose_dir }}"
+    state: directory
+    mode: '0755'
+  tags: compose
+
+- name: Deploy docker-compose.yml for full stack
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ app_compose_dir }}/docker-compose.yml"
+    mode: '0644'
+  tags: compose
+
+- name: Deploy environment file
+  template:
+    src: .env.j2
+    dest: "{{ app_compose_dir }}/.env"
+    mode: '0600'
+  tags: compose
+
+- name: Start Docker Compose stack
+  community.docker.docker_compose:
+    project_src: "{{ app_compose_dir }}"
+    state: present
+    pull: yes
+  register: compose_output
+  tags: compose
+
+- name: Display compose output
+  debug:
+    var: compose_output
+  tags: compose

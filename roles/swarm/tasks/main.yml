@@ -1,0 +1,68 @@
+---
+- name: Check if Swarm is already initialized
+  shell: docker info | grep -i 'swarm' | grep -i 'active'
+  register: swarm_status
+  changed_when: false
+  failed_when: false
+  tags: swarm
+
+- name: Initialize Docker Swarm on manager
+  command: docker swarm init --advertise-addr {{ swarm_advertise_addr }}
+  when:
+    - swarm_manager is defined
+    - swarm_manager
+    - swarm_status.rc != 0
+  register: swarm_init
+  tags: swarm
+
+- name: Get worker join token
+  command: docker swarm join-token -q worker
+  register: swarm_worker_token
+  when:
+    - swarm_manager is defined
+    - swarm_manager
+  changed_when: false
+  tags: swarm
+
+- name: Get manager join token
+  command: docker swarm join-token -q manager
+  register: swarm_manager_token
+  when:
+    - swarm_manager is defined
+    - swarm_manager
+  changed_when: false
+  tags: swarm
+
+- name: Store join tokens
+  set_fact:
+    worker_token: "{{ swarm_worker_token.stdout }}"
+    manager_token: "{{ swarm_manager_token.stdout }}"
+    manager_addr: "{{ swarm_advertise_addr }}"
+  when:
+    - swarm_manager is defined
+    - swarm_manager
+  delegate_to: localhost
+  delegate_facts: true
+  tags: swarm
+
+- name: Join Swarm as worker
+  command: >
+    docker swarm join
+    --token {{ hostvars['localhost']['worker_token'] }}
+    {{ hostvars['localhost']['manager_addr'] }}:2377
+  when:
+    - swarm_worker is defined
+    - swarm_worker
+    - swarm_status.rc != 0
+  tags: swarm
+
+- name: Deploy stack services
+  command: docker stack deploy -c {{ item }} myapp
+  args:
+    chdir: "{{ app_compose_dir }}"
+  loop:
+    - docker-compose.yml
+  when:
+    - swarm_manager is defined
+    - swarm_manager
+  tags: swarm, deploy

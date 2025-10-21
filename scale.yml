@@ -1,0 +1,22 @@
+---
+- name: Scale Docker Services
+  hosts: swarm_managers
+  become: yes
+  
+  vars_prompt:
+    - name: service_name
+      prompt: "Enter service name to scale"
+      private: no
+    
+    - name: replicas
+      prompt: "Enter number of replicas"
+      private: no
+  
+  tasks:
+    - name: Scale service
+      command: docker service scale {{ service_name }}={{ replicas }}
+      register: scale_result
+    
+    - name: Display scale result
+      debug:
+        var: scale_result.stdout_lines

@@ -1,0 +1,46 @@
+---
+# Docker configuration
+docker_edition: 'ce'
+docker_package: "docker-{{ docker_edition }}"
+docker_version: "5:24.0.0-1~ubuntu.22.04~jammy"
+docker_compose_version: "2.20.0"
+
+# Docker daemon configuration
+docker_daemon_options:
+  log-driver: "json-file"
+  log-opts:
+    max-size: "10m"
+    max-file: "3"
+  storage-driver: "overlay2"
+  live-restore: true
+  userland-proxy: false
+
+# Network configuration
+docker_networks:
+  - name: frontend
+    driver: bridge
+    ipam_config:
+      - subnet: "172.20.0.0/16"
+        gateway: "172.20.0.1"
+  - name: backend
+    driver: bridge
+    ipam_config:
+      - subnet: "172.21.0.0/16"
+        gateway: "172.21.0.1"
+
+# Volume configuration
+docker_volumes:
+  - name: postgres_data
+  - name: redis_data
+  - name: nginx_config
+  - name: app_data
+
+# Container registry
+docker_registry_url: "docker.io"
+docker_registry_username: ""
+docker_registry_password: ""
+
+# Monitoring
+monitoring_enabled: true
+portainer_enabled: true
+portainer_port: 9000

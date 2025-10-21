@@ -1,0 +1,103 @@
+---
+- name: Pull required Docker images
+  docker_image:
+    name: "{{ item }}"
+    source: pull
+    state: present
+  loop:
+    - nginx:alpine
+    - postgres:15-alpine
+    - redis:7-alpine
+    - node
+cat > roles/containers/tasks/main.yml << 'EOF'
+---
+- name: Pull required Docker images
+  docker_image:
+    name: "{{ item }}"
+    source: pull
+    state: present
+  loop:
+    - nginx:alpine
+    - postgres:15-alpine
+    - redis:7-alpine
+    - node:18-alpine
+  tags: containers, images
+
+- name: Deploy PostgreSQL database
+  docker_container:
+    name: postgres_db
+    image: postgres:15-alpine
+    state: started
+    restart_policy: unless-stopped
+    networks:
+      - name: backend
+    env:
+      POSTGRES_DB: "appdb"
+      POSTGRES_USER: "appuser"
+      POSTGRES_PASSWORD: "{{ postgres_password }}"
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  tags: containers, postgres
+
+- name: Deploy Redis cache
+  docker_container:
+    name: redis_cache
+    image: redis:7-alpine
+    state: started
+    restart_policy: unless-stopped
+    networks:
+      - name: backend
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+  tags: containers, redis
+
+- name: Deploy Nginx web server
+  docker_container:
+    name: nginx_web
+    image: nginx:alpine
+    state: started
+    restart_policy: unless-stopped
+    networks:
+      - name: frontend
+    volumes:
+      - nginx_config:/etc/nginx/conf.d
+      - /var/www/html:/usr/share/nginx/html:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  tags: containers, nginx
+
+- name: Wait for containers to be healthy
+  shell: |
+    docker inspect --format={% raw %}'{{.State.Health.Status}}'{% endraw %} {{ item }}
+  register: health_status
+  until: health_status.stdout == 'healthy'
+  retries: 10
+  delay: 5
+  loop:
+    - postgres_db
+    - redis_cache
+    - nginx_web
+  changed_when: false
+  tags: containers, healthcheck

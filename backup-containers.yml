@@ -1,0 +1,68 @@
+---
+- name: Backup Docker Volumes and Configurations
+  hosts: docker_hosts
+  become: yes
+  
+  vars:
+    backup_dir: /var/backups/docker
+    backup_date: "{{ ansible_date_time.date }}"
+  
+  tasks:
+    - name: Create backup directory
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: '0755'
+    
+    - name: Backup Docker volumes
+      shell: |
+        for volume in $(docker volume ls -q); do
+          docker run --rm -v ${volume}:/data -v {{ backup_dir }}:/backup alpine \
+            tar czf /backup/${volume}_{{ backup_date }}.tar.gz -C /data .
+        done
+      args:
+        executable: /bin/bash
+    
+    - name: Backup compose files
+cat > backup-containers.yml << 'EOF'
+---
+- name: Backup Docker Volumes and Configurations
+  hosts: docker_hosts
+  become: yes
+  
+  vars:
+    backup_dir: /var/backups/docker
+    backup_date: "{{ ansible_date_time.date }}"
+  
+  tasks:
+    - name: Create backup directory
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: '0755'
+    
+    - name: Backup Docker volumes
+      shell: |
+        for volume in $(docker volume ls -q); do
+          docker run --rm -v ${volume}:/data -v {{ backup_dir }}:/backup alpine \
+            tar czf /backup/${volume}_{{ backup_date }}.tar.gz -C /data .
+        done
+      args:
+        executable: /bin/bash
+    
+    - name: Backup compose files
+      archive:
+        path: "{{ app_compose_dir }}"
+        dest: "{{ backup_dir }}/compose_files_{{ backup_date }}.tar.gz"
+      when: app_compose_dir is defined
+    
+    - name: List backups
+      find:
+        paths: "{{ backup_dir }}"
+        patterns: "*.tar.gz"
+      register: backup_files
+    
+    - name: Display backup files
+      debug:
+        msg: "Backup created: {{ item.path }}"
+      loop: "{{ backup_files.files }}"

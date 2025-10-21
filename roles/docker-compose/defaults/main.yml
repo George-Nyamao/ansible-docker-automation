@@ -1,0 +1,6 @@
+---
+app_compose_dir: /opt/docker-apps/myapp
+postgres_db_name: appdb
+postgres_db_user: appuser
+postgres_db_password: "ChangeMe123!"
+redis_password: "RedisPass123!"

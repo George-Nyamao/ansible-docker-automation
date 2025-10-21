@@ -1,0 +1,63 @@
+---
+- name: "Docker Infrastructure Setup"
+  hosts: docker_hosts
+  become: yes
+  
+  pre_tasks:
+    - name: Display deployment info
+      debug:
+        msg:
+          - "=========================================="
+          - "Docker Infrastructure Deployment"
+          - "=========================================="
+          - "Target: {{ inventory_hostname }}"
+          - "IP: {{ ansible_default_ipv4.address }}"
+          - "=========================================="
+      tags: always
+
+  roles:
+    - role: docker
+      tags: docker
+
+- name: "Deploy Containers"
+  hosts: docker_hosts
+  become: yes
+  
+  roles:
+    - role: containers
+      tags: containers
+
+- name: "Deploy Docker Compose Stack"
+  hosts: docker_hosts[0]
+  become: yes
+  
+  roles:
+    - role: docker-compose
+      tags: compose
+
+- name: "Configure Docker Swarm Cluster"
+  hosts: docker
+  become: yes
+  serial: 1
+  
+  roles:
+    - role: swarm
+      tags: swarm
+  
+  post_tasks:
+    - name: Display Swarm status
+      command: docker node ls
+      register: swarm_nodes
+      when:
+        - swarm_manager is defined
+        - swarm_manager
+      changed_when: false
+      tags: swarm
+
+    - name: Show Swarm nodes
+      debug:
+        var: swarm_nodes.stdout_lines
+      when:
+        - swarm_manager is defined
+        - swarm_manager
+      tags: swarm
